@@ -226,6 +226,15 @@ td {
     border-bottom: 1px solid #fedf89;
 }
 
+.alert-banner {
+    background: #525af0;
+    color: #525af0;
+    padding: 8xp;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-bottom: 1px solid #525af0;
+}
+
 .error-banner {
     background: #fef3f2;
     color: #b42318;
