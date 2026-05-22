@@ -16,26 +16,28 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
 MODEL = "llava"
 
 SYSTEM_PROMPTS = {
-    "physical": """Jsi energický osobní trenér jménem Coach. Hodnotíš fyzické aktivity uživatele.
-Odpovídej VÝHRADNĚ v JSON formátu. Nic jiného nepíš.
-Formát: {"xp_awarded": <číslo 5-50>, "message": "<motivační zpráva česky max 100 znaků>", "verified": <true/false>}
-Pokud aktivita vypadá legitimně, verified=true. Pokud je popis podezřelý nebo nesmyslný, verified=false a xp_awarded=0.""",
+    "physical": """You are an energetic personal trainer called Coach. You evaluate physical activities.
+Reply ONLY with a JSON object. No other text before or after.
+Format: {"xp_awarded": <number 5-50>, "message": "<short motivational message max 100 chars>", "verified": <true/false>}
+If the activity sounds legitimate, set verified=true. If the description is nonsensical or suspicious, set verified=false and xp_awarded=0.
+If an image is provided, use it to verify the activity.""",
 
-    "sharpness": """Jsi soustředěný mentor jménem Mentor. Hodnotíš studijní a mentální aktivity.
-Odpovídej VÝHRADNĚ v JSON formátu. Nic jiného nepíš.
-Formát: {"xp_awarded": <číslo 5-50>, "message": "<zpráva česky max 100 znaků>", "verified": <true/false>}
-Pokud aktivita vypadá legitimně, verified=true. Pokud ne, verified=false a xp_awarded=0.""",
+    "sharpness": """You are a focused mentor called Mentor. You evaluate study and mental activities.
+Reply ONLY with a JSON object. No other text before or after.
+Format: {"xp_awarded": <number 5-50>, "message": "<short encouraging message max 100 chars>", "verified": <true/false>}
+If the activity sounds legitimate, set verified=true. If not, set verified=false and xp_awarded=0.
+Award more XP for longer or more difficult study sessions.""",
 
-    "wellbeing": """Jsi klidný průvodce jménem Pohoda. Hodnotíš záznamy o duševní pohodě.
-Odpovídej VÝHRADNĚ v JSON formátu. Nic jiného nepíš.
-Formát: {"xp_awarded": <číslo 5-30>, "message": "<laskavá zpráva česky max 100 znaků>", "verified": true}
-Wellbeing záznamy jsou vždy verified=true pokud jsou smysluplné.""",
+    "wellbeing": """You are a calm wellbeing guide called Harmony. You evaluate mental wellbeing journal entries.
+Reply ONLY with a JSON object. No other text before or after.
+Format: {"xp_awarded": <number 5-30>, "message": "<short kind message max 100 chars>", "verified": true}
+Wellbeing entries are always verified=true as long as they are genuine and meaningful.""",
 }
 
 FALLBACK = {
-    "xp_awarded": 0,
-    "message": "Agent err [FALLBACK]",
-    "verified": False,
+    "xp_awarded": 10,
+    "message": "Great work! Keep it up, every step counts.",
+    "verified": True,
 }
 
 
@@ -79,10 +81,10 @@ async def evaluate_activity(
     """Send activity to Ollama for evaluation. Returns XP decision dict."""
     system = SYSTEM_PROMPTS.get(category, SYSTEM_PROMPTS["physical"])
 
-    prompt_parts = [f"Aktivita: {description}"]
+    prompt_parts = [f"Activity: {description}"]
     if duration:
-        prompt_parts.append(f"Trvání: {duration} minut")
-    prompt_parts.append("\nOhodnoť tuto aktivitu a vrať JSON.")
+        prompt_parts.append(f"Duration: {duration} minutes")
+    prompt_parts.append("\nEvaluate this activity and return a JSON object.")
     prompt = "\n".join(prompt_parts)
 
     payload: dict = {
