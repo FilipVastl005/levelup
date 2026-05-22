@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="cs" :data-theme="user.theme || 'light'" x-data="auraApp()" x-cloak>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - LevelUp</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="{ aboutOpen: false }">
+    <div class="beta-banner">Toto je beta build! HrozÍ výpadky spojení se servrem</div>
+
+    <!-- Unified Navbar -->
+    <nav class="nav-wrapper">
+        <div class="nav-container">
+            <a href="/dashboard" class="nav-logo">LevelUp</a>
+            <div class="nav-links">
+                <a href="/dashboard" class="active">Domů</a>
+                <a href="/requests">Požadavky</a>
+                <a href="#" @click.prevent="aboutOpen = true">O aplikaci</a>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button class="theme-toggle" @click="toggleTheme()" style="margin:0; padding:5px 10px;">🌓</button>
+                <a href="/logout" style="color:var(--error-color); text-decoration:none; font-size:0.8rem; font-weight:600;">Odhlásit</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- About Modal -->
+    <div class="modal-overlay" x-show="aboutOpen" x-transition x-cloak @click.away="aboutOpen = false">
+        <div class="modal-content">
+            <button class="modal-close" @click="aboutOpen = false">&times;</button>
+            <h2 style="color:var(--accent-primary);">O aplikaci LevelUp</h2>
+            <p style="margin-top:15px; line-height:1.6;">LevelUp je váš osobní průvodce růstem. Sledujte své pokroky ve třech klíčových oblastech:</p>
+            <ul style="margin: 15px 0; padding-left: 20px;">
+                <li><strong>Fyzická zdatnost:</strong> Sport a zdravý pohyb.</li>
+                <li><strong>Studijní zdatnost:</strong> Učení a mentální trénink.</li>
+                <li><strong>Mentální pohoda:</strong> Emoční stabilita a reflexe.</li>
+            </ul>
+            <p>Náš <strong>AI trenér</strong> analyzuje vaše aktivity a odměňuje vás XP body. Dosáhněte nových úrovní a sledujte, jak se zlepšujete den za dnem!</p>
+        </div>
+    </div>
+
+    <div class="container">
+        {% if error %}
+        <div class="error-banner">{{ error }}</div>
+        {% endif %}
+        <header style="margin-bottom: 20px;">
+            <div class="user-info">
+                <span>Vítej, <strong x-text="user.username"></strong> | Úroveň: <span x-text="user.total_level"></span> | Streak: <span x-text="user.current_streak"></span> dní</span>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- PHYSICAL -->
+            <div class="section">
+                <h1>Fyzická zdatnost</h1>
+                <div class="xp-container">
+                    <p>Úroveň: <span x-text="user.physical_level"></span> | XP: <span x-text="user.physical_xp"></span></p>
+                    <div class="xp-bar">
+                        <div class="xp-fill" :style="`width: ${physical_progress.percentage}%`" style="background: #22c55e;"></div>
+                    </div>
+                </div>
+                
+                <form @submit.prevent="submitForm($event, 'physical')" enctype="multipart/form-data" :class="{ 'loading': loading.physical }">
+                    <h2>Zaznamenat aktivitu</h2>
+                    <input type="text" name="activity" placeholder="Co jsi dělal?" required minlength="10" maxlength="500">
+                    <input type="number" name="duration" placeholder="Doba (min)">
+                    <input type="file" name="proof" accept="image/*">
+                    <button type="submit" x-text="loading.physical ? 'Zpracovávám...' : 'Uložit'"></button>
+                </form>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr><th>Aktivita</th><th>XP</th><th>Datum</th></tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="log in physical_logs" :key="log.id">
+                                <tr>
+                                    <td x-text="log.description"></td>
+                                    <td x-text="log.xp_awarded"></td>
+                                    <td x-text="log.created.substring(0, 10)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- WELLBEING -->
+            <div class="section">
+                <h1>Mentální pohoda</h1>
+                <div class="xp-container">
+                    <p>Úroveň: <span x-text="user.wellbeing_level"></span> | XP: <span x-text="user.wellbeing_xp"></span></p>
+                    <div class="xp-bar">
+                        <div class="xp-fill" :style="`width: ${wellbeing_progress.percentage}%`" style="background: #a855f7;"></div>
+                    </div>
+                </div>
+
+                <form @submit.prevent="submitForm($event, 'wellbeing')" :class="{ 'loading': loading.wellbeing }">
+                    <h2>Jak se cítíš?</h2>
+                    <textarea name="activity" rows="3" placeholder="Popiš svůj den..." required minlength="10" maxlength="500"></textarea>
+                    <button type="submit" x-text="loading.wellbeing ? 'Zpracovávám...' : 'Uložit'"></button>
+                </form>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr><th>Popis</th><th>XP</th><th>Datum</th></tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="log in wellbeing_logs" :key="log.id">
+                                <tr>
+                                    <td x-text="log.description"></td>
+                                    <td x-text="log.xp_awarded"></td>
+                                    <td x-text="log.created.substring(0, 10)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SHARPNESS -->
+            <div class="section">
+                <h1>Studijní zdatnost</h1>
+                <div class="xp-container">
+                    <p>Úroveň: <span x-text="user.sharpness_level"></span> | XP: <span x-text="user.sharpness_xp"></span></p>
+                    <div class="xp-bar">
+                        <div class="xp-fill" :style="`width: ${sharpness_progress.percentage}%`" style="background: #3b82f6;"></div>
+                    </div>
+                </div>
+
+                <form @submit.prevent="submitForm($event, 'sharpness')" enctype="multipart/form-data" :class="{ 'loading': loading.sharpness }">
+                    <h2>Zaznamenat studium</h2>
+                    <input type="text" name="activity" placeholder="Co jsi studoval?" required minlength="10" maxlength="500">
+                    <input type="number" name="duration" placeholder="Doba (min)">
+                    <input type="file" name="proof" accept="image/*">
+                    <button type="submit" x-text="loading.sharpness ? 'Zpracovávám...' : 'Uložit'"></button>
+                </form>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr><th>Aktivita</th><th>XP</th><th>Datum</th></tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="log in sharpness_logs" :key="log.id">
+                                <tr>
+                                    <td x-text="log.description"></td>
+                                    <td x-text="log.xp_awarded"></td>
+                                    <td x-text="log.created.substring(0, 10)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SOCIAL / LEADERBOARD -->
+            <div class="section">
+                <h1>Komunita</h1>
+                <h2>Žebříček</h2>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr><th>#</th><th>Hráč</th><th>Úroveň</th><th>XP</th></tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(u, index) in leaderboard" :key="u.id">
+                                <tr :class="{ 'highlight': u.id === user.id }">
+                                    <td x-text="index + 1"></td>
+                                    <td x-text="u.username"></td>
+                                    <td x-text="u.total_level"></td>
+                                    <td x-text="u.total_xp"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h2 style="margin-top:20px">Přátelé</h2>
+                <form @submit.prevent="submitForm($event, 'friends')" :class="{ 'loading': loading.friends }">
+                    <input type="text" name="friend" placeholder="Jméno přítele" required>
+                    <button type="submit">Přidat</button>
+                </form>
+                <ul style="margin-top:10px">
+                    <template x-for="f in friends" :key="f.id">
+                        <li><span x-text="f.username"></span> (Lvl <span x-text="f.level"></span>)</li>
+                    </template>
+                </ul>
+
+                <h2 style="margin-top:20px">Skupiny</h2>
+                <form @submit.prevent="submitForm($event, 'groups')" :class="{ 'loading': loading.groups }">
+                    <input type="text" name="groupname" placeholder="Název skupiny" required>
+                    <input type="text" name="members" placeholder="Členové (čárka)">
+                    <button type="submit">Vytvořit</button>
+                </form>
+                <ul style="margin-top:10px">
+                    <template x-for="g in groups" :key="g.id">
+                        <li x-text="g.name"></li>
+                    </template>
+                </ul>
+            </div>
+        </div>
+
+        <!-- QUICK REQUESTS STATUS -->
+        <div class="section" style="margin-top: 30px;" x-show="queue.filter(j => ['pending', 'processing'].includes(j.status)).length > 0">
+            <h1>Zpracovávám vaše aktivity...</h1>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                <template x-for="job in queue.filter(j => ['pending', 'processing'].includes(j.status)).slice(0, 3)" :key="job.id">
+                    <div class="card pending" style="padding: 10px; border: 1px dashed var(--border-color); border-radius: 8px; font-size: 0.9rem;">
+                        <span>⏳</span>
+                        <strong x-text="job.category"></strong>: <span x-text="job.description"></span>
+                    </div>
+                </template>
+            </div>
+            <a href="/requests" style="font-size: 0.85rem; color: var(--accent-primary); text-decoration: none; font-weight: 600;">Zobrazit vše a historii &rarr;</a>
+        </div>
+    </div>
+
+    <script>
+        function auraApp() {
+            return {
+                user: {{ user | tojson }},
+                physical_logs: {{ physical_logs | tojson }},
+                sharpness_logs: {{ sharpness_logs | tojson }},
+                wellbeing_logs: {{ wellbeing_logs | tojson }},
+                leaderboard: {{ leaderboard | tojson }},
+                friends: {{ friends | tojson }},
+                groups: {{ groups | tojson }},
+                queue: {{ queue | tojson }},
+                physical_progress: {{ physical_progress | tojson }},
+                sharpness_progress: {{ sharpness_progress | tojson }},
+                wellbeing_progress: {{ wellbeing_progress | tojson }},
+                loading: { physical: false, sharpness: false, wellbeing: false, friends: false, groups: false },
+
+                async toggleTheme() {
+                    const newTheme = this.user.theme === 'dark' ? 'light' : 'dark';
+                    try {
+                        const response = await fetch('/settings/theme', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Alpine-Request': 'true' },
+                            body: `theme=${newTheme}`
+                        });
+                        const data = await response.json();
+                        if (data.status === 'success') { this.user.theme = newTheme; }
+                    } catch (e) { console.error(e); }
+                },
+
+                async submitForm(e, type) {
+                    this.loading[type] = true;
+                    const form = e.target;
+                    const formData = new FormData(form);
+                    let url = (['physical', 'sharpness', 'wellbeing'].includes(type)) ? `/log/${type}` : (type === 'friends' ? '/friends/add' : '/groups/create');
+
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'X-Alpine-Request': 'true' },
+                            body: formData
+                        });
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            if (['physical', 'sharpness', 'wellbeing'].includes(type)) {
+                                alert('Doba zpracování požadavku je 10 minut a více podle zatížení serveru');
+                            }
+                            if (data.user) this.user = data.user;
+                            if (data.physical_logs) this.physical_logs = data.physical_logs;
+                            if (data.sharpness_logs) this.sharpness_logs = data.sharpness_logs;
+                            if (data.wellbeing_logs) this.wellbeing_logs = data.wellbeing_logs;
+                            if (data.physical_progress) this.physical_progress = data.physical_progress;
+                            if (data.sharpness_progress) this.sharpness_progress = data.sharpness_progress;
+                            if (data.wellbeing_progress) this.wellbeing_progress = data.wellbeing_progress;
+                            if (data.friends) this.friends = data.friends;
+                            if (data.groups) this.groups = data.groups;
+                            form.reset();
+                        } else { alert(data.message || 'Chyba'); }
+                    } catch (e) { alert('Chyba sítě'); }
+                    finally { this.loading[type] = false; }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

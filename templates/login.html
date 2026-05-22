@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="cs" x-data="authApp()" x-cloak>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Přihlášení - LevelUp</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .loading { opacity: 0.5; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div class="beta-banner">Toto je beta build!</div>
+    <div class="auth-container">
+        <h1>LevelUp</h1>
+        <h2>Přihlášení</h2>
+        
+        <p class="error" x-show="errorMessage" x-text="errorMessage"></p>
+        {% if error %}
+            <p class="error" x-show="!errorMessage">{{ error }}</p>
+        {% endif %}
+
+        <form @submit.prevent="submit" :class="{ 'loading': loading }">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required x-model="formData.email">
+            <label for="password">Heslo:</label>
+            <input type="password" id="password" name="password" required x-model="formData.password">
+            <button type="submit" x-text="loading ? 'Přihlašování...' : 'Přihlásit se'"></button>
+        </form>
+        <p>Nemáš účet? <a href="/signup">Zaregistruj se</a></p>
+    </div>
+
+    <script>
+        function authApp() {
+            return {
+                formData: {
+                    email: '',
+                    password: ''
+                },
+                loading: false,
+                errorMessage: '',
+                async submit() {
+                    this.loading = true;
+                    this.errorMessage = '';
+                    const body = new URLSearchParams();
+                    body.append('email', this.formData.email);
+                    body.append('password', this.formData.password);
+
+                    try {
+                        const response = await fetch('/login', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-Alpine-Request': 'true'
+                            },
+                            body: body
+                        });
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            window.location.href = data.redirect;
+                        } else {
+                            this.errorMessage = data.message || 'Přihlášení se nezdařilo';
+                        }
+                    } catch (e) {
+                        this.errorMessage = 'Síťová chyba';
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

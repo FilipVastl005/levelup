@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="cs" :data-theme="user.theme || 'light'" x-data="auraApp()" x-cloak>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Požadavky - LevelUp</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="{ aboutOpen: false }">
+    <div class="beta-banner">Toto je beta build!</div>
+
+    <!-- Unified Navbar -->
+    <nav class="nav-wrapper">
+        <div class="nav-container">
+            <a href="/dashboard" class="nav-logo">LevelUp</a>
+            <div class="nav-links">
+                <a href="/dashboard">Domů</a>
+                <a href="/requests" class="active">Požadavky</a>
+                <a href="#" @click.prevent="aboutOpen = true">O aplikaci</a>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button class="theme-toggle" @click="toggleTheme()" style="margin:0; padding:5px 10px;">🌓</button>
+                <a href="/logout" style="color:var(--error-color); text-decoration:none; font-size:0.8rem; font-weight:600;">Odhlásit</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- About Modal -->
+    <div class="modal-overlay" x-show="aboutOpen" x-transition x-cloak @click.away="aboutOpen = false">
+        <div class="modal-content">
+            <button class="modal-close" @click="aboutOpen = false">&times;</button>
+            <h2 style="color:var(--accent-primary);">O aplikaci LevelUp</h2>
+            <p style="margin-top:15px; line-height:1.6;">LevelUp je váš osobní průvodce růstem. Sledujte své pokroky ve třech klíčových oblastech:</p>
+            <ul style="margin: 15px 0; padding-left: 20px;">
+                <li><strong>Fyzická zdatnost:</strong> Sport a zdravý pohyb.</li>
+                <li><strong>Studijní zdatnost:</strong> Učení a mentální trénink.</li>
+                <li><strong>Mentální pohoda:</strong> Emoční stabilita a reflexe.</li>
+            </ul>
+            <p>Náš <strong>AI trenér</strong> analyzuje vaše aktivity a odměňuje vás XP body. Dosáhněte nových úrovní a sledujte, jak se zlepšujete den za dnem!</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <header style="margin-bottom: 20px;">
+            <div class="user-info">
+                <span>Vítej, <strong x-text="user.username"></strong> | Úroveň: <span x-text="user.total_level"></span> | Streak: <span x-text="user.current_streak"></span> dní</span>
+            </div>
+        </header>
+
+        <div class="section">
+            <!-- Pending section -->
+            <div x-show="queue.filter(j => ['pending', 'processing'].includes(j.status)).length > 0">
+                <h2>Zpracovává se...</h2>
+                <template x-for="job in queue.filter(j => ['pending', 'processing'].includes(j.status))" :key="job.id">
+                    <div class="card pending" style="padding: 15px; border: 1px dashed var(--border-color); margin-bottom: 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                        <span class="loading-spinner">⏳</span>
+                        <div>
+                            <strong x-text="job.category"></strong>: <span x-text="job.description"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <div class="dashboard-grid" style="margin-top: 30px;">
+                <!-- Approved column -->
+                <div>
+                    <h2>Schváleno</h2>
+                    <template x-for="job in queue.filter(j => j.status === 'completed' && j.verified)" :key="job.id">
+                        <div class="card approved" style="padding: 20px; border: 1px solid #22c55e; margin-bottom: 20px; border-radius: 12px; background: rgba(34, 197, 94, 0.05);">
+                            <div style="display:flex; justify-content:space-between;">
+                                <strong x-text="job.category" style="text-transform:uppercase; font-size:0.8rem; color:#166534;"></strong>
+                                <small x-text="job.created.substring(0, 10)"></small>
+                            </div>
+                            <p style="margin: 10px 0;"><span x-text="job.description"></span></p>
+                            <p><strong>XP:</strong> <span style="color:#166534; font-weight:800;">+<span x-text="job.xp_awarded"></span></span></p>
+                            <div style="margin-top:15px; padding-top:10px; border-top:1px solid rgba(34, 197, 94, 0.2); font-style:italic; font-size:0.9rem;">
+                                &ldquo;<span x-text="job.ai_response"></span>&rdquo;
+                            </div>
+                        </div>
+                    </template>
+                    <template x-if="queue.filter(j => j.status === 'completed' && j.verified).length === 0">
+                        <p style="color:var(--text-secondary);">Zatím žádné schválené aktivity.</p>
+                    </template>
+                </div>
+
+                <!-- Rejected column -->
+                <div>
+                    <h2>Zamítnuto</h2>
+                    <template x-for="job in queue.filter(j => j.status === 'completed' && !j.verified)" :key="job.id">
+                        <div class="card rejected" style="padding: 20px; border: 1px solid var(--error-color); margin-bottom: 20px; border-radius: 12px; background: rgba(239, 68, 68, 0.05);">
+                            <div style="display:flex; justify-content:space-between;">
+                                <strong x-text="job.category" style="text-transform:uppercase; font-size:0.8rem; color:var(--error-color);"></strong>
+                                <small x-text="job.created.substring(0, 10)"></small>
+                            </div>
+                            <p style="margin: 10px 0;"><span x-text="job.description"></span></p>
+                            <div style="margin-top:10px; color:var(--error-color); font-size:0.9rem;">
+                                <strong>Důvod:</strong> <span x-text="job.ai_response"></span>
+                            </div>
+                            
+                            <form @submit.prevent="submitFeedback($event, job.id)" style="margin-top:20px; border-top: 1px solid rgba(239, 68, 68, 0.2); padding-top: 15px;">
+                                <label style="font-size:0.75rem;">Nesouhlasíš s rozhodnutím?</label>
+                                <textarea name="message" placeholder="Proč si myslíš, že by mělo být schváleno?" required style="font-size: 0.85rem; height: 80px; margin-top:5px;"></textarea>
+                                <button type="submit" style="font-size: 0.8rem; padding: 10px; margin-top:10px; width:100%;">Odeslat zpětnou vazbu</button>
+                            </form>
+                        </div>
+                    </template>
+                    <template x-if="queue.filter(j => j.status === 'completed' && !j.verified).length === 0">
+                        <p style="color:var(--text-secondary);">Žádné zamítnuté aktivity.</p>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function auraApp() {
+            return {
+                user: {{ user | tojson }},
+                queue: {{ queue | tojson }},
+                
+                async toggleTheme() {
+                    const newTheme = this.user.theme === 'dark' ? 'light' : 'dark';
+                    try {
+                        const response = await fetch('/settings/theme', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Alpine-Request': 'true' },
+                            body: `theme=${newTheme}`
+                        });
+                        const data = await response.json();
+                        if (data.status === 'success') { this.user.theme = newTheme; }
+                    } catch (e) { console.error(e); }
+                },
+
+                async submitFeedback(e, queueId) {
+                    const form = e.target;
+                    const formData = new FormData(form);
+                    formData.append('queue_id', queueId);
+
+                    try {
+                        const response = await fetch('/feedback', {
+                            method: 'POST',
+                            headers: { 'X-Alpine-Request': 'true' },
+                            body: formData
+                        });
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            alert('Zpětná vazba byla odeslána.');
+                            form.reset();
+                        } else { alert(data.message || 'Chyba'); }
+                    } catch (e) { alert('Chyba sítě'); }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
