@@ -373,10 +373,13 @@
                             if (done) break;
                             const chunk = decoder.decode(value, { stream: true });
                             this.coachMessages[coachMsgIdx].text += chunk;
-                            // Clean up "Coach:" prefix if it appears at the very start
-                            if (this.coachMessages[coachMsgIdx].text.toLowerCase().startsWith('coach:')) {
-                                this.coachMessages[coachMsgIdx].text = this.coachMessages[coachMsgIdx].text.substring(6).trim();
-                            }
+                            
+                            // Clean up initial spaces (keep-alive) or "Coach:" prefix
+                            let t = this.coachMessages[coachMsgIdx].text;
+                            if (t.startsWith(' ')) t = t.trimStart();
+                            if (t.toLowerCase().startsWith('coach:')) t = t.substring(6).trimStart();
+                            this.coachMessages[coachMsgIdx].text = t;
+                            
                             this.$nextTick(() => this._scrollChat());
                         }
 

@@ -73,12 +73,16 @@ User: {body.message.strip()}
 Coach:"""
 
     async def generate():
+        # Yield an initial space to immediately open the HTTP body.
+        # This prevents Cloudflare/Proxies from timing out (524/520) while Ollama loads the model.
+        yield " "
         try:
             logger.info(f"Streaming coach chat request to Ollama: {OLLAMA_URL}")
             async with client.stream(
                 "POST",
                 f"{OLLAMA_URL}/api/generate",
                 json={"model": MODEL, "prompt": prompt, "stream": True},
+                timeout=httpx.Timeout(600.0, read=600.0, connect=30.0)
             ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
@@ -95,6 +99,14 @@ Coach:"""
                         continue
         except Exception as e:
             logger.error(f"Streaming error: {e}")
-            yield f"\n[Error: {type(e).__name__}. Try again later.]"
+            yield f"\n[Error: {type(e).__name__}. The server might be overloaded. Please try again in a minute.]"
 
-    return StreamingResponse(generate(), media_type="text/plain")
+    return StreamingResponse(
+        generate(),
+        media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable Nginx buffering
+        }
+    )
