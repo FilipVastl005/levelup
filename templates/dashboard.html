@@ -345,7 +345,7 @@
                             },
                             body: JSON.stringify({
                                 message: text,
-                                history: this.coachMessages.slice(-10),
+                                history: this.coachMessages.slice(0, -1).slice(-10),
                                 user_stats: {
                                     physical_level: this.user.physical_level,
                                     sharpness_level: this.user.sharpness_level,
@@ -357,17 +357,34 @@
                         });
                         
                         if (!r.ok) {
-                            const errData = await r.json().catch(() => ({}));
-                            throw new Error(errData.reply || `Server error: ${r.status}`);
+                            throw new Error(`Server error: ${r.status}`);
                         }
                         
-                        const d = await r.json();
-                        this.coachMessages.push({ role: 'coach', text: d.reply || 'Sorry, no response.' });
+                        // Add placeholder for streaming response
+                        const coachMsgIdx = this.coachMessages.length;
+                        this.coachMessages.push({ role: 'coach', text: '' });
+                        this.coachLoading = false; // Hide "thinking" spinner while streaming
+
+                        const reader = r.body.getReader();
+                        const decoder = new TextDecoder();
+                        
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            const chunk = decoder.decode(value, { stream: true });
+                            this.coachMessages[coachMsgIdx].text += chunk;
+                            // Clean up "Coach:" prefix if it appears at the very start
+                            if (this.coachMessages[coachMsgIdx].text.toLowerCase().startsWith('coach:')) {
+                                this.coachMessages[coachMsgIdx].text = this.coachMessages[coachMsgIdx].text.substring(6).trim();
+                            }
+                            this.$nextTick(() => this._scrollChat());
+                        }
+
                     } catch(e) {
                         console.error('Coach Error:', e);
                         let msg = 'Network error or server too busy. ';
-                        if (e.message.includes('timeout') || e.message.includes('NetworkError') || e.message.includes('fetch')) {
-                            msg += 'The AI might be "waking up" (loading into memory). Please wait 30s and try sending your message again! 🤖';
+                        if (e.message.includes('524') || e.message.includes('timeout') || e.message.includes('fetch')) {
+                            msg += 'The AI might be "waking up" (loading into memory). Please wait 30s and try again! 🤖';
                         } else {
                             msg += e.message;
                         }

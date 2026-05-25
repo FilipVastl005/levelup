@@ -5,8 +5,9 @@ Calls Ollama directly (no queue, instant response).
 
 import logging
 import httpx
+import json
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from services.ollama import client, OLLAMA_URL, MODEL
@@ -71,29 +72,29 @@ Conversation so far:
 User: {body.message.strip()}
 Coach:"""
 
-    try:
-        logger.info(f"Sending coach chat request to Ollama: {OLLAMA_URL}")
-        resp = await client.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={"model": MODEL, "prompt": prompt, "stream": False},
-        )
-        logger.info(f"Ollama response status: {resp.status_code}")
-        resp.raise_for_status()
-        data = resp.json()
-        reply = data.get("response", "").strip()
+    async def generate():
+        try:
+            logger.info(f"Streaming coach chat request to Ollama: {OLLAMA_URL}")
+            async with client.stream(
+                "POST",
+                f"{OLLAMA_URL}/api/generate",
+                json={"model": MODEL, "prompt": prompt, "stream": True},
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                        chunk = data.get("response", "")
+                        if chunk:
+                            yield chunk
+                        if data.get("done"):
+                            break
+                    except json.JSONDecodeError:
+                        continue
+        except Exception as e:
+            logger.error(f"Streaming error: {e}")
+            yield f"\n[Error: {type(e).__name__}. Try again later.]"
 
-        # Clean up any accidental "Coach:" prefix the model might add
-        if reply.lower().startswith("coach:"):
-            reply = reply[6:].strip()
-
-        if not reply:
-            reply = "I'm not sure how to answer that. Try asking about your training or study habits!"
-
-        return JSONResponse({"reply": reply[:500]})
-
-    except httpx.TimeoutException:
-        logger.error("Coach chat timed out after 600s")
-        return JSONResponse({"reply": "internal AI server error mabye overload please try again later"})
-    except Exception as e:
-        logger.error(f"Coach chat error: {e}")
-        return JSONResponse({"reply": f"Something went wrong on my end. ({type(e).__name__})"})
+    return StreamingResponse(generate(), media_type="text/plain")
