@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from services.db import init_db
 from services.queue import process_queue, resume_interrupted_jobs, cleanup_old_jobs
-from routers import auth, dashboard, admin
+from routers import auth, dashboard, admin, coach
 
 logging.basicConfig(
     level=logging.INFO,
@@ -54,3 +54,4 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(admin.router)
+app.include_router(coach.router)
