@@ -8,127 +8,112 @@
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         .ai-lang-banner {
-            background: #fef3c7;
-            color: #92400e;
-            border-bottom: 1px solid #fcd34d;
+            background: #fef0c7;
+            color: #93370d;
+            border-bottom: 1px solid #fedf89;
             text-align: center;
             padding: 8px 16px;
-            font-size: 0.82rem;
-            font-weight: 600;
-        }
-        [data-theme="dark"] .ai-lang-banner {
-            background: #3b2a00;
-            color: #fcd34d;
-            border-color: #78450a;
+            font-size: 0.75rem;
+            font-weight: 700;
         }
         .coach-fab {
             position: fixed;
-            bottom: 28px;
-            right: 28px;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: var(--accent-primary, #6366f1);
-            color: #fff;
-            border: none;
-            font-size: 1.5rem;
+            bottom: 24px;
+            right: 24px;
+            padding: 8px 14px;
+            background: var(--button-bg);
+            color: var(--button-text);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
             z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.2s, box-shadow 0.2s;
         }
-        .coach-fab:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(0,0,0,0.3); }
+        .coach-fab:hover { opacity: 0.9; }
         .coach-panel {
             position: fixed;
-            bottom: 96px;
-            right: 28px;
-            width: 340px;
-            max-height: 520px;
-            background: var(--card-bg, #fff);
-            border: 1px solid var(--border-color, #e5e7eb);
-            border-radius: 16px;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+            bottom: 64px;
+            right: 24px;
+            width: 320px;
+            max-height: 480px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
             display: flex;
             flex-direction: column;
             z-index: 999;
             overflow: hidden;
         }
         .coach-panel-header {
-            padding: 14px 16px;
-            background: var(--accent-primary, #6366f1);
-            color: #fff;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
             font-weight: 700;
-            font-size: 0.95rem;
+            font-size: 0.875rem;
             display: flex;
-            align-items: center;
             justify-content: space-between;
+            align-items: center;
+            color: var(--text-primary);
+        }
+        .coach-panel-header small {
+            font-weight: 400;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
         }
         .coach-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 14px;
+            padding: 12px 16px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
         .coach-msg {
-            max-width: 85%;
-            padding: 9px 13px;
-            border-radius: 12px;
             font-size: 0.875rem;
-            line-height: 1.45;
+            line-height: 1.5;
             word-break: break-word;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
         }
-        .coach-msg.user {
-            align-self: flex-end;
-            background: var(--accent-primary, #6366f1);
-            color: #fff;
-            border-bottom-right-radius: 3px;
+        .coach-msg:last-child { border-bottom: none; padding-bottom: 0; }
+        .coach-msg-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 3px;
         }
-        .coach-msg.coach {
-            align-self: flex-start;
-            background: var(--hover-bg, #f3f4f6);
-            color: var(--text-primary, #111);
-            border-bottom-left-radius: 3px;
-        }
-        [data-theme="dark"] .coach-msg.coach { background: #2a2a3a; color: #e5e7eb; }
-        .coach-msg.typing { opacity: 0.6; font-style: italic; }
+        .coach-msg.user .coach-msg-label { color: var(--accent-primary); }
+        .coach-msg.typing { color: var(--text-secondary); font-style: italic; }
         .coach-input-row {
             display: flex;
             gap: 8px;
             padding: 10px 12px;
-            border-top: 1px solid var(--border-color, #e5e7eb);
+            border-top: 1px solid var(--border-color);
         }
         .coach-input-row input {
             flex: 1;
-            padding: 8px 12px;
-            border: 1px solid var(--border-color, #e5e7eb);
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
-            background: var(--input-bg, #f9fafb);
-            color: var(--text-primary, #111);
+            background: var(--input-bg);
+            color: var(--text-primary);
+            font-family: inherit;
             font-size: 0.875rem;
             outline: none;
         }
-        .coach-input-row input:focus { border-color: var(--accent-primary, #6366f1); }
+        .coach-input-row input:focus { border-color: var(--accent-primary); }
         .coach-input-row button {
-            padding: 8px 14px;
-            background: var(--accent-primary, #6366f1);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 600;
+            padding: 8px 12px;
+            font-size: 0.8rem;
         }
-        .coach-input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .coach-input-row button:disabled { opacity: 0.4; cursor: not-allowed; }
     </style>
 </head>
 <body x-data="{ aboutOpen: false }">
     <div class="beta-banner">Toto je beta build! Hrozí výpadky spojení se serverem</div>
-    <div class="ai-lang-banner">⚠️ AI funguje pouze s EN jazyky — pokud použijete jiný, nemusíte dostat správnou odpověď!</div>
+    <div class="ai-lang-banner">AI funguje pouze s EN jazyky — pokud použijete jiný, nemusíte dostat správnou odpověď!</div>
 
     <nav class="nav-wrapper">
         <div class="nav-container">
@@ -267,7 +252,7 @@
             <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
                 <template x-for="job in queue.filter(j => ['pending', 'processing'].includes(j.status)).slice(0, 3)" :key="job.id">
                     <div class="card pending" style="padding: 10px; border: 1px dashed var(--border-color); border-radius: 8px; font-size: 0.9rem;">
-                        ⏳ <strong x-text="job.category"></strong>: <span x-text="job.description"></span>
+                        [ <strong x-text="job.category"></strong>: <span x-text="job.description"></span>
                     </div>
                 </template>
             </div>
@@ -276,21 +261,22 @@
     </div>
 
     <!-- Coach FAB -->
-    <button class="coach-fab" @click="coachOpen = !coachOpen">
-        <span x-text="coachOpen ? '✕' : '🤖'"></span>
-    </button>
+    <button class="coach-fab" @click="coachOpen = !coachOpen" x-text="coachOpen ? 'Zavřít' : 'AI Coach'"></button>
 
     <!-- Coach Panel -->
     <div class="coach-panel" x-show="coachOpen" x-transition x-cloak>
         <div class="coach-panel-header">
-            <div>🤖 AI Coach</div>
+            <span>Coach</span>
             <small style="opacity:0.75; font-size:0.7rem; font-weight:400;">EN only · powered by LLaVA</small>
         </div>
         <div class="coach-messages" x-ref="chatMessages">
             <template x-for="(msg, i) in coachMessages" :key="i">
-                <div class="coach-msg" :class="msg.role" x-text="msg.text"></div>
+                <div class="coach-msg" :class="msg.role">
+                    <div class="coach-msg-label" x-text="msg.role === 'user' ? 'You' : 'Coach'"></div>
+                    <span x-text="msg.text"></span>
+                </div>
             </template>
-            <div class="coach-msg coach typing" x-show="coachLoading">Coach is thinking...</div>
+            <div class="coach-msg coach typing" x-show="coachLoading">Thinking...</div>
         </div>
         <div class="coach-input-row">
             <input
@@ -325,7 +311,7 @@
                 coachInput: '',
                 coachLoading: false,
                 coachMessages: [
-                    { role: 'coach', text: "Hey! I'm your AI Coach. Ask me anything about fitness, studying, or your progress. Write in English for best results! 💪" }
+                    { role: 'coach', text: "Hello. Ask me anything about your training, studies, or progress. Write in English for best results." }
                 ],
 
                 async toggleTheme() {

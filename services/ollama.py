@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
 MODEL = "llava"
 
+# Shared client for efficiency
+client = httpx.AsyncClient(timeout=600.0)
+
 SYSTEM_PROMPTS = {
     "physical": """You are an energetic personal trainer called Coach. You evaluate physical activities.
 Reply ONLY with a JSON object. No other text before or after.
@@ -103,29 +106,29 @@ async def evaluate_activity(
             logger.warning(f"Could not read screenshot {screenshot_path}: {e}")
 
     try:
-        async with httpx.AsyncClient(timeout=600.0) as client:
-            resp = await client.post(
-                f"{OLLAMA_URL}/api/generate",
-                json=payload,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            raw = data.get("response", "")
-            logger.info(f"Ollama raw response: {raw[:200]}")
+        logger.info(f"Evaluating activity via Ollama ({category})...")
+        resp = await client.post(
+            f"{OLLAMA_URL}/api/generate",
+            json=payload,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        raw = data.get("response", "")
+        logger.info(f"Ollama raw response: {raw[:200]}")
 
-            result = _extract_json(raw)
-            if result:
-                # Validate and clamp values
-                result["xp_awarded"] = max(0, min(100, int(result.get("xp_awarded", 10))))
-                result["message"] = str(result.get("message", FALLBACK["message"]))[:200]
-                result["verified"] = bool(result.get("verified", True))
-                return result
-            else:
-                logger.warning(f"No JSON found in Ollama response: {raw[:300]}")
-                return FALLBACK
+        result = _extract_json(raw)
+        if result:
+            # Validate and clamp values
+            result["xp_awarded"] = max(0, min(100, int(result.get("xp_awarded", 10))))
+            result["message"] = str(result.get("message", FALLBACK["message"]))[:200]
+            result["verified"] = bool(result.get("verified", True))
+            return result
+        else:
+            logger.warning(f"No JSON found in Ollama response: {raw[:300]}")
+            return FALLBACK
 
     except httpx.TimeoutException:
-        logger.error("Ollama request timed out")
+        logger.error("Ollama request timed out (600s)")
         return FALLBACK
     except Exception as e:
         logger.error(f"Ollama error: {e}")
