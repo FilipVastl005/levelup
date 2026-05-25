@@ -56,65 +56,15 @@ This will start:
 5. `aura_nginx` (Ports 80 & 443)
 6. `levelup_ollama` (Port 11434 internally)
 
-## 5. HTTPS Setup (Free via Let's Encrypt)
+## 5. Cloudflare Tunnel Setup
 
-We use Nginx with Certbot for automated HTTPS.
+Since you are using **Cloudflare Tunnel**, you don't need to worry about Port 80/443 or Certbot.
 
-### Step A: Initial Certificate Request
-Run the following command (replace with your email and domain):
-```bash
-docker run -it --rm --name certbot \
-  -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
-  -v "$(pwd)/certbot/www:/var/www/certbot" \
-  certbot/certbot certonly --webroot -w /var/www/certbot \
-  -d home.eggmanstudio.me --email your-email@example.com --agree-tos --no-eff-email
-```
+1.  In your Cloudflare Dashboard, point your tunnel for `home.eggmanstudio.me` to `http://localhost:80` (the Nginx container).
+2.  Nginx will handle the internal routing to the correct apps.
+3.  FastAPI is already configured with `ProxyHeadersMiddleware` to handle HTTPS detection from Cloudflare.
 
-### Step B: Update Nginx for HTTPS
-Once you have the certificates, update `nginx/default.conf` to use them:
-
-```nginx
-server {
-    listen 80;
-    server_name home.eggmanstudio.me;
-    location /.well-known/acme-challenge/ { root /var/www/certbot; }
-    location / { return 301 https://$host$request_uri; }
-}
-
-server {
-    listen 443 ssl;
-    server_name home.eggmanstudio.me;
-
-    ssl_certificate /etc/letsencrypt/live/home.eggmanstudio.me/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/home.eggmanstudio.me/privkey.pem;
-
-    location / {
-        proxy_pass http://home_app:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location /levelup {
-        proxy_pass http://levelup_app:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location /food {
-        proxy_pass http://food_app:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-Then restart Nginx: `docker compose restart nginx`.
+---
 
 ## 6. How the Food App Logic Works
 

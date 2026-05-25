@@ -4,12 +4,14 @@ from fastapi import FastAPI, Request, Response, Form
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from uvloop.middleware.proxy_headers import ProxyHeadersMiddleware
 
 # Ensure we can import from the parent directory's services
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services import db
 
 app = FastAPI(title="Eggman Studio Home")
+app.add_middleware(ProxyHeadersMiddleware, trusted_proxies="*")
 templates = Jinja2Templates(directory="home_app/templates")
 app.mount("/static", StaticFiles(directory="home_app/static"), name="static")
 

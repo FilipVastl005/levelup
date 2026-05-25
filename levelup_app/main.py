@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from uvloop.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from services.db import init_db
 from services.queue import process_queue, resume_interrupted_jobs, cleanup_old_jobs
@@ -73,6 +74,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan, title="LevelUp", root_path="/levelup")
+app.add_middleware(ProxyHeadersMiddleware, trusted_proxies="*")
 
 app.mount("/static", StaticFiles(directory="levelup_app/static"), name="static")
 
