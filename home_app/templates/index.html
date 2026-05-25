@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eggman Studio - Home</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .hero {
+            text-align: center;
+            padding: 80px 20px;
+            background: linear-gradient(180deg, var(--card-bg) 0%, var(--bg-color) 100%);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            letter-spacing: -0.04em;
+        }
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 40px;
+        }
+        .app-cards {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-top: -40px;
+        }
+        @media (min-width: 768px) {
+            .app-cards { grid-template-columns: 1fr 1fr; }
+        }
+        .app-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .app-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.05);
+            border-color: var(--accent-primary);
+        }
+        .app-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+        }
+        .app-card p {
+            margin-bottom: 25px;
+        }
+        .app-card .btn {
+            display: inline-block;
+            background: var(--button-bg);
+            color: var(--button-text);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-wrapper">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">Eggman Studio</a>
+            <div class="nav-links">
+                {% if user %}
+                    <span class="user-info">Ahoj, {{ user.username }}</span>
+                    <a href="/logout" style="color:var(--error-color)">Odhlásit</a>
+                {% else %}
+                    <a href="/login">Přihlásit se</a>
+                    <a href="/signup">Registrace</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <div class="container">
+            <h1>Eggman Studio</h1>
+            <p>Vítejte v našem ekosystému aplikací pro osobní růst a zdravý životní styl.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="app-cards">
+            <a href="/levelup/" class="app-card">
+                <div>
+                    <h2>LevelUp</h2>
+                    <p>Gamifikujte svůj život. Sledujte svůj pokrok, získávejte XP a soutěžte s přáteli v osobním rozvoji.</p>
+                </div>
+                <span class="btn">Otevřít LevelUp</span>
+            </a>
+            <a href="/food/" class="app-card">
+                <div>
+                    <h2>Víte, co jíte?</h2>
+                    <p>Odhalte pravdu o potravinách. Skenujte čárové kódy a zjistěte, zda jíte skutečné jídlo nebo jen chemickou náhražku.</p>
+                </div>
+                <span class="btn">Otevřít Food App</span>
+            </a>
+        </div>
+
+        <div class="section" style="margin-top: 60px;">
+            <h2>O nás</h2>
+            <p style="margin-top: 15px;">Eggman Studio se zaměřuje na vývoj nástrojů, které lidem pomáhají lépe porozumět svému tělu a mysli. Věříme v sílu dat a transparentnosti.</p>
+        </div>
+    </div>
+</body>
+</html>

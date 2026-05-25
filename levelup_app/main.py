@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from services.db import init_db
 from services.queue import process_queue, resume_interrupted_jobs, cleanup_old_jobs
-from routers import auth, dashboard, admin, coach
+from routers import dashboard, admin
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,11 +72,9 @@ async def lifespan(app: FastAPI):
     logger.info("Shutdown complete.")
 
 
-app = FastAPI(lifespan=lifespan, title="LevelUp")
+app = FastAPI(lifespan=lifespan, title="LevelUp", root_path="/levelup")
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="levelup_app/static"), name="static")
 
-app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(admin.router)
-app.include_router(coach.router)

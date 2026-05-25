@@ -1,24 +1,69 @@
 version: '3.8'
 
 services:
-  app:
+  home_app:
     build: .
-    container_name: levelup_app
+    container_name: aura_home
     restart: always
-    ports:
-      - "3000:3000"
+    command: uvicorn home_app.main:app --host 0.0.0.0 --port 3000
+    environment:
+      - DB_PATH=/mnt/storage/levelup.db
+    volumes:
+      - /mnt/storage:/mnt/storage
+
+  levelup_app:
+    build: .
+    container_name: aura_levelup
+    restart: always
+    command: uvicorn levelup_app.main:app --host 0.0.0.0 --port 3000
     environment:
       - DB_PATH=/mnt/storage/levelup.db
       - QUEUE_PATH=/mnt/storage/queue
-      - UPLOADS_DIR=/app/uploads
       - OLLAMA_URL=http://ollama:11434
       - SECRET_KEY=${SECRET_KEY}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     depends_on:
       - ollama
     volumes:
+      - /mnt/storage:/mnt/storage
       - ./uploads:/app/uploads
-      - /mnt/storage:/mnt/storage   # DB + queue live here
+
+  food_app:
+    build: .
+    container_name: aura_food
+    restart: always
+    command: uvicorn food_app.main:app --host 0.0.0.0 --port 3000
+    environment:
+      - DB_PATH=/mnt/storage/levelup.db
+    volumes:
+      - /mnt/storage:/mnt/storage
+
+  food_scraper:
+    build: .
+    container_name: aura_food_scraper
+    restart: always
+    command: python food_app/scraper/main.py
+    environment:
+      - DB_PATH=/mnt/storage/levelup.db
+      - OLLAMA_URL=http://ollama:11434
+    volumes:
+      - /mnt/storage:/mnt/storage
+
+  nginx:
+    image: nginx:latest
+    container_name: aura_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - home_app
+      - levelup_app
+      - food_app
 
   ollama:
     image: ollama/ollama:latest

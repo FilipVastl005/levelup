@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Požadavky - LevelUp</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/levelup/static/css/style.css">
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body x-data="{ aboutOpen: false }">
@@ -15,9 +15,10 @@
         <div class="nav-container">
             <a href="/dashboard" class="nav-logo">LevelUp</a>
             <div class="nav-links">
-                <a href="/dashboard">Domů</a>
-                <a href="/requests" class="active">Požadavky</a>
-                <a href="#" @click.prevent="aboutOpen = true">O aplikaci</a>
+                <a href="/">Home</a>
+                <a href="/levelup/dashboard">LevelUp</a>
+                <a href="/food/">Food App</a>
+                <a href="/levelup/requests" class="active">Požadavky</a>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
                 <button class="theme-toggle" @click="toggleTheme()" style="margin:0; padding:5px 10px;">🌓</button>
@@ -37,7 +38,7 @@
                 <li><strong>Studijní zdatnost:</strong> Učení a mentální trénink.</li>
                 <li><strong>Mentální pohoda:</strong> Emoční stabilita a reflexe.</li>
             </ul>
-            <p>Náš <strong>AI trenér</strong> analyzuje vaše aktivity a odměňuje vás XP body. Dosáhněte nových úrovní a sledujte, jak se zlepšujete den za dnem!</p>
+            <p>Sledujte své pokroky ve třech klíčových oblastech a získávejte XP body za své aktivity. Dosáhněte nových úrovní a sledujte, jak se zlepšujete den za dnem!</p>
         </div>
     </div>
 

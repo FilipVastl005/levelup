@@ -136,6 +136,37 @@ def init_db():
             FOREIGN KEY (queue_id) REFERENCES queue(id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS products (
+            ean             TEXT PRIMARY KEY,
+            name            TEXT NOT NULL,
+            brand           TEXT,
+            ingredients     TEXT,
+            allergens       TEXT,
+            nutrition       TEXT, -- JSON string
+            nutrition_score TEXT,
+            state           TEXT DEFAULT 'pending', -- food, obelisk, chemical_paste, pending
+            created         TEXT NOT NULL,
+            updated         TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS shops (
+            id      TEXT PRIMARY KEY,
+            name    TEXT NOT NULL,
+            country TEXT DEFAULT 'CZ'
+        );
+
+        CREATE TABLE IF NOT EXISTS scanned_products (
+            id          TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL,
+            ean         TEXT NOT NULL,
+            shop_id     TEXT,
+            price       REAL,
+            created     TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (ean) REFERENCES products(ean) ON DELETE CASCADE,
+            FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE SET NULL
+        );
+
         CREATE INDEX IF NOT EXISTS idx_sessions_user    ON sessions(user_id);
         CREATE INDEX IF NOT EXISTS idx_logs_user        ON logs(user_id);
         CREATE INDEX IF NOT EXISTS idx_logs_created     ON logs(created);
@@ -144,6 +175,30 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_friends_user     ON friends(user_id);
         CREATE INDEX IF NOT EXISTS idx_friends_friend   ON friends(friend_id);
         """)
+        seed_shops()
+
+
+def seed_shops():
+    """Seed the database with common supermarket chains if they don't exist."""
+    shops = [
+        ("lidl", "Lidl"),
+        ("kaufland", "Kaufland"),
+        ("billa", "Billa"),
+        ("penny", "Penny Market"),
+        ("albert", "Albert"),
+        ("tesco", "Tesco"),
+        ("rohlik", "Rohlik.cz"),
+        ("kosik", "Kosik.cz"),
+        ("coop", "COOP"),
+        ("globus", "Globus"),
+        ("zabka", "Žabka"),
+    ]
+    with get_db() as conn:
+        for sid, name in shops:
+            conn.execute(
+                "INSERT OR IGNORE INTO shops (id, name, country) VALUES (?, ?, 'CZ')",
+                (sid, name)
+            )
 
 
 def _new_id():
@@ -541,3 +596,73 @@ def get_admin_stats() -> dict:
         "failed_today": failed_today,
         "active_users": active_users,
     }
+
+
+# ─────────────────────────────────────────────
+# FOOD APP
+# ─────────────────────────────────────────────
+
+def get_product_by_ean(ean: str) -> dict | None:
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM products WHERE ean = ?", (ean,)).fetchone()
+    return row_to_dict(row)
+
+
+def create_product(ean: str, name: str, brand: str = "", ingredients: str = "",
+                   allergens: str = "", nutrition: str = "{}",
+                   nutrition_score: str = "", state: str = "pending") -> dict:
+    now = _now()
+    with get_db() as conn:
+        conn.execute(
+            """INSERT INTO products (ean, name, brand, ingredients, allergens,
+               nutrition, nutrition_score, state, created, updated)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(ean) DO UPDATE SET
+               name=excluded.name, brand=excluded.brand, ingredients=excluded.ingredients,
+               allergens=excluded.allergens, nutrition=excluded.nutrition,
+               nutrition_score=excluded.nutrition_score, state=excluded.state, updated=excluded.updated""",
+            (ean, name, brand, ingredients, allergens, nutrition, nutrition_score, state, now, now)
+        )
+    return get_product_by_ean(ean)
+
+
+def get_all_shops() -> list:
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM shops ORDER BY name ASC").fetchall()
+    return rows_to_list(rows)
+
+
+def record_scan(user_id: str, ean: str, shop_id: str = None, price: float = None):
+    sid = _new_id()
+    now = _now()
+    with get_db() as conn:
+        conn.execute(
+            """INSERT INTO scanned_products (id, user_id, ean, shop_id, price, created)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (sid, user_id, ean, shop_id, price, now)
+        )
+
+
+def get_user_scans(user_id: str, limit: int = 20) -> list:
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT s.*, p.name as product_name, p.brand, sh.name as shop_name
+               FROM scanned_products s
+               JOIN products p ON s.ean = p.ean
+               LEFT JOIN shops sh ON s.shop_id = sh.id
+               WHERE s.user_id = ?
+               ORDER BY s.created DESC LIMIT ?""",
+            (user_id, limit)
+        ).fetchall()
+    return rows_to_list(rows)
+
+
+def get_pending_classifications() -> list:
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM products WHERE state = 'pending'").fetchall()
+    return rows_to_list(rows)
+
+
+def update_product_state(ean: str, state: str):
+    with get_db() as conn:
+        conn.execute("UPDATE products SET state = ?, updated = ? WHERE ean = ?", (state, _now(), ean))

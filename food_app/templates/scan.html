@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="cs" x-data="scannerApp()">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skenovat produkt - Víte, co jíte?</title>
+    <link rel="stylesheet" href="/food/static/css/style.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        #reader {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .result-panel {
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        .nutrition-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .nutrition-item {
+            padding: 10px;
+            background: var(--hover-bg);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-wrapper">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">Eggman Studio</a>
+            <div class="nav-links">
+                <a href="/food/">Historie</a>
+                <a href="/food/scan" class="active">Skenovat</a>
+                <a href="/levelup/">LevelUp</a>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span class="user-info">{{ user.username }}</span>
+                <a href="/logout" style="color:var(--error-color); text-decoration:none; font-size:0.8rem; font-weight:600;">Odhlásit</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header>
+            <h1>Skenovat produkt</h1>
+            <p>Namiřte kameru na čárový kód produktu.</p>
+        </header>
+
+        <div id="reader" x-show="!product"></div>
+
+        <div class="section" x-show="!product" style="margin-top: 20px;">
+            <p style="margin-bottom: 10px;">Nebo zadejte kód ručně:</p>
+            <div style="display:flex; gap:10px;">
+                <input type="text" x-model="manualEan" placeholder="Čárový kód (EAN)" style="flex:1">
+                <button @click="lookup(manualEan)">Hledat</button>
+            </div>
+        </div>
+
+        <div class="result-panel" x-show="product" x-cloak>
+            <div style="display:flex; justify-content:space-between; align-items:start;">
+                <div>
+                    <h2 x-text="product.name"></h2>
+                    <p x-text="product.brand" style="color:var(--text-secondary)"></p>
+                </div>
+                <div style="text-align:right">
+                    <span class="btn" style="background:var(--accent-primary); padding: 5px 10px; font-size: 0.75rem;" x-text="'Skóre: ' + (product.nutrition_score || '?').toUpperCase()"></span>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <h3>Složení:</h3>
+                <p x-text="product.ingredients || 'Informace nejsou k dispozici'" style="font-size:0.875rem; margin-top:5px; color:var(--text-secondary)"></p>
+            </div>
+
+            <div class="nutrition-grid" x-show="Object.keys(product.nutrition || {}).length > 0">
+                <template x-for="(val, key) in product.nutrition">
+                    <div class="nutrition-item">
+                        <strong x-text="key"></strong>: <span x-text="val"></span>
+                    </div>
+                </template>
+            </div>
+
+            <div class="section" style="margin-top: 25px; background:var(--hover-bg)">
+                <h3>Kde jste to koupili?</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                    <select x-model="scanData.shop_id">
+                        <option value="">Vyberte obchod...</option>
+                        {% for shop in shops %}
+                            <option value="{{ shop.id }}">{{ shop.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" x-model="scanData.price" placeholder="Cena (Kč)">
+                </div>
+                <button @click="saveScan()" style="margin-top:15px; width:100%">Uložit do historie</button>
+                <button @click="reset()" style="margin-top:10px; width:100%; background:transparent; color:var(--text-secondary); border-color:var(--border-color)">Zrušit / Skenovat znovu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function scannerApp() {
+            return {
+                html5QrCode: null,
+                product: null,
+                manualEan: '',
+                scanData: {
+                    shop_id: '',
+                    price: ''
+                },
+                
+                init() {
+                    this.html5QrCode = new Html5Qrcode("reader");
+                    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+                    
+                    this.html5QrCode.start(
+                        { facingMode: "environment" }, 
+                        config, 
+                        (decodedText) => {
+                            this.lookup(decodedText);
+                        }
+                    );
+                },
+
+                async lookup(ean) {
+                    if (!ean) return;
+                    if (this.html5QrCode) {
+                        try { await this.html5QrCode.stop(); } catch(e) {}
+                    }
+                    
+                    try {
+                        const r = await fetch(`/food/lookup/${ean}`);
+                        const d = await r.json();
+                        if (d.status === 'success') {
+                            this.product = d.product;
+                            this.manualEan = ean;
+                        } else {
+                            alert(d.message || 'Produkt nenalezen');
+                            this.init(); // Restart scanner
+                        }
+                    } catch(e) {
+                        alert('Chyba při komunikaci se serverem');
+                        this.init();
+                    }
+                },
+
+                async saveScan() {
+                    try {
+                        const r = await fetch('/food/save-scan', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                ean: this.manualEan,
+                                shop_id: this.scanData.shop_id,
+                                price: this.scanData.price
+                            })
+                        });
+                        const d = await r.json();
+                        if (d.status === 'success') {
+                            window.location.href = '/food/';
+                        } else {
+                            alert(d.message || 'Chyba při ukládání');
+                        }
+                    } catch(e) {
+                        alert('Chyba sítě');
+                    }
+                },
+
+                reset() {
+                    this.product = null;
+                    this.manualEan = '';
+                    this.init();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

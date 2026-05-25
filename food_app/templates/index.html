@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historie skenů - Víte, co jíte?</title>
+    <link rel="stylesheet" href="/food/static/css/style.css">
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+    <nav class="nav-wrapper">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">Eggman Studio</a>
+            <div class="nav-links">
+                <a href="/food/">Historie</a>
+                <a href="/food/scan">Skenovat</a>
+                <a href="/levelup/">LevelUp</a>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span class="user-info">{{ user.username }}</span>
+                <a href="/logout" style="color:var(--error-color); text-decoration:none; font-size:0.8rem; font-weight:600;">Odhlásit</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header>
+            <h1>Vaše historie skenování</h1>
+            <a href="/food/scan" class="btn" style="text-decoration:none">Skenovat nový produkt</a>
+        </header>
+
+        {% if not scans %}
+            <div class="section" style="text-align:center; padding: 40px;">
+                <p>Zatím jste neskenovali žádné produkty.</p>
+                <p style="margin-top: 20px;"><a href="/food/scan" class="btn" style="text-decoration:none">Začít skenovat</a></p>
+            </div>
+        {% else %}
+            <div class="dashboard-grid" style="grid-template-columns: 1fr;">
+                {% for scan in scans %}
+                    <div class="section" style="margin-bottom: 15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:start;">
+                            <div>
+                                <h2 style="color:var(--text-primary)">{{ scan.product_name }}</h2>
+                                <p style="font-size:0.85rem; color:var(--text-secondary)">{{ scan.brand }} | EAN: {{ scan.ean }}</p>
+                                <p style="margin-top:10px;">
+                                    <strong>Obchod:</strong> {{ scan.shop_name or 'Neznámý' }}
+                                    {% if scan.price %}| <strong>Cena:</strong> {{ scan.price }} Kč{% endif %}
+                                </p>
+                            </div>
+                            <div style="text-align:right">
+                                <span style="font-size:0.75rem; color:var(--text-secondary)">{{ scan.created[:10] }}</span>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

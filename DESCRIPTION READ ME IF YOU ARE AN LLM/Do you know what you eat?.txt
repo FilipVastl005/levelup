@@ -1,0 +1,247 @@
+ME:
+
+PASTED CONTENT {1. Tesco Online Grocery API Analysis
+
+Tesco runs a unified global e-commerce infrastructure. The frontend communicates with a robust Internal REST API that returns highly structured JSON payloads.
+How to Intercept the Data (Network Inspection)
+
+    Open Google Chrome, go to nakup.itesco.cz and open Developer Tools (F12 or Ctrl+Shift+I).
+
+    Navigate to the Network tab and filter by Fetch/XHR.
+
+    In the search bar on the Tesco website, type a product name or scan an EAN (e.g., "Coca Cola").
+
+    Look for XHR requests containing /groceries/v1/ or /api/products/ in the URL.
+
+    Inspect the Preview/Response tab. You will find a clean JSON object containing all product attributes.
+
+Key API Characteristics & Endpoint Behavior
+
+    Search / Barcode Resolution: Tesco allows searching by EAN (barcode) directly via their search endpoint. When an EAN is inputted, the API returns the exact product match.
+
+    Authentication: Most product catalog endpoints do not require a user bearer token, but they do require specific HTTP headers:
+
+        x-cps-tenant: Identifies the region (e.g., tesco-cz).
+
+        User-Agent: Needs to mimic a real browser to prevent 403 Forbidden errors.
+
+    Data Structure: The JSON payload typically contains a dedicated ingredients array or a long string, an allergens block, and an ox-nutrition table detailing energy, fats, carbs, and sugars per 100g/100ml.
+
+2. Rohlik.cz API Analysis
+
+Rohlik.cz is a modern, tech-first e-grocery delivery service. Their website operates as a Single Page Application (SPA), making its backend API highly optimized, fast, and rich in metadata.
+How to Intercept the Data (Network Inspection)
+
+    Open rohlik.cz and open Developer Tools (F12) on the Network tab (Filter: Fetch/XHR).
+
+    Search for a product.
+
+    Look for network requests containing /api/ or targeting their specialized product/search microservices (often containing paths like /v1/products/ or GraphQL endpoints).
+
+    Examine the JSON response. Rohlik's data is notoriously clean and comprehensive.
+
+Key API Characteristics & Endpoint Behavior
+
+    EAN Search: Rohlik allows filtering or searching directly by barcode.
+
+    Data Structure: Rohlik breaks down product information into very precise keys:
+
+        composition / ingredients: Pure text string of ingredients.
+
+        allergens: Explicit array of allergen IDs or names.
+
+        nutritionalValues: Well-formatted object containing nested keys for energyKj, energyKcal, fats, sugars, etc.
+
+    Geoblocking / Session Requirements: Rohlik requires a delivery region or postal code (zip_code) to show availability and pricing. You may need to pass a default session cookie or header indicating a major city postal code (e.g., 11000 for Prague) to access the catalog reliably.
+
+3. Step-by-Step Implementation Strategy for the Backend
+
+To programmatically intercept and consume these APIs, the backend service (Node.js, Python, or Go) should follow this workflow:
+Step A: Header Emulation & Session Handling
+
+Supermarket firewalls (like Cloudflare or Akamai) easily block standard automated scripts.
+
+    Use HTTP clients that support HTTP/2 (like httpx in Python or got in Node.js).
+
+    Always pass realistic User-Agent, Accept-Language: cs-CZ,cs;q=0.9, and Referer headers.
+
+Step B: The EAN-First Fallback Architecture
+
+Since your application focuses on "food truth", you should prioritize data sources by reliability:
+
+    Tier 1 (Local Cache): Check if the barcode already exists in your local database.
+
+    Tier 2 (Open Food Facts): Query the free, open-source world.openfoodfacts.org/api/v2/product/[EAN].json API. It requires no scraping and provides instant NOVA/Nutri-Score processing data.
+
+    Tier 3 (Rohlik/Tesco Interception): If Tier 2 fails, execute a background worker to query the Rohlik or Tesco internal search endpoint using the EAN.
+
+Step C: Parsing and Normalization
+
+Because Tesco and Rohlik structure their JSON differently, create a Data Transformer Layer in your code. This layer maps vendor-specific JSON fields into a unified schema for your app:
+JSON
+
+{
+  "ean": "859xxxxxxxxxx",
+  "name": "Unified Product Name",
+  "brand": "Brand Name",
+  "ingredients_raw": "Sugar, Palm Oil, Wheat Flour...",
+  "additives": ["E322", "E471"],
+  "nutrition_per_100g": {
+    "energy_kcal": 534,
+    "sugar": 56.3
+  },
+  "source": "Tesco / Rohlik / OFF"
+}
+
+Step D: Resiliency Against API Changes
+
+Internal APIs can change field names without warning.
+
+    Implement strict try-catch blocks during JSON parsing.
+
+    Set up an automated alert system (e.g., via Slack or email logs) that triggers when a scraper endpoint suddenly returns a 403 Forbidden, 401 Unauthorized, or a schema validation error.}
+
+    ok now i wan tto implement something. it is a compleatly new app under the saim domain basically you have one main home domain like home.eggmanstudio.me and from there you need to lig in or create an account, there will be about us on the main page and what we do then the navbar either leads you to the level up app or a do you know what you eat? app
+
+your job:
+
+1) remove the AI chat from level up
+2)set up the main page
+3)create the second app
+4)walk me thru how to set up the WHOLE thing
+note: the connection needs to be secured thru https for free if posible
+
+Do you know what you eat?
+
+* this is a platfor about waht you ACTUALLY eat if it is a real food or a obelisk of food or just a eatable chemical slab with taste and color
+* this mans that the app has a whole database that it goes from
+* REALLY simullar to OFF (Open FOod Facts) but with better UI and teh ability for user to scan a product code read it send an API request to OFF that returns its data and compares it with locall state database currently only czechia
+* the way we will get the data from czechia is intercepting data
+* gemini description is as pasted content
+* the rohlik.cz has a messy api requests and tesco has it only when user does something on the website
+
+the logic (a wierd description couse i aint a bot):
+
+all of the time a bot is fetching products from those websites and storing them in a database then when a night comes an AI processes all three sources and makes a summary in the acces time when user scans by a code the reques goes to the app and based on what products it came up with it dispays them to the user and he choses with one it was and what shop they bought it in searching in a database of shops also pasted content in here [1. Central & Eastern Europe (Your Core Target)
+Since you mentioned Kaufland, Lidl, and Coop, these are the corporate heavyweights dominating this region:
+
+* Schwarz Gruppe (Germany): The largest retail group in Europe.
+   * Lidl (Discount supermarket across 30+ countries)
+   * Kaufland (Hypermarket across Germany and Eastern Europe)
+* REWE Group (Germany): * Billa (Massive presence in Austria, Czechia, Slovakia, Bulgaria)
+   * Penny Market (Discount arm of REWE)
+   * REWE / Temma (Germany)
+* Ahold Delhaize (Netherlands): A global giant that operates local brands.
+   * Albert (Czech Republic)
+   * Albert Heijn (Netherlands & Belgium)
+   * Delhaize (Belgium & Luxembourg)
+   * Mega Image (Romania)
+* Jeronimo Martins (Portugal): * Biedronka (The undisputed king of grocery retail in Poland)
+* The Eurocash / Żabka Groups (Poland):
+   * Żabka (Over 10,000 modern convenience/mini-markets; highly advanced API infrastructure)
+2. Western Europe & The Nordics (Including "Rimi/Extra")
+You mentioned Kivi (likely a typo for Rimi or K-Citymarket/Kesko) and Mini, Priz (Pris), or Extra. These are iconic Scandinavian and Western European chains:
+
+* NorgesGruppen (Norway):
+   * KIWI (Discount grocery)
+   * MENY (High-end supermarket)
+   * SPAR Norge / Joker
+* Coop Norge / Coop Sweden / Coop Danmark: Separate cooperative national entities that run Coop Extra, Coop Prix, and Coop Mega.
+* Reitan Retail (Scandinavia & Baltics):
+   * REMA 1000 (Massive discount chain in Norway and Denmark)
+* ICA Gruppen (Sweden & Baltics):
+   * ICA (Sweden's dominant chain)
+   * Rimi Baltic (Major player in Estonia, Latvia, and Lithuania)
+* Kesko (Finland):
+   * K-Citymarket / K-Supermarket / K-Market
+* Carrefour (France): A global monster operating hypermarkets across Europe, Brazil, and the Middle East.
+* E.Leclerc & Intermarché (France): Massive hypermarket cooperatives with deep product data inventories.
+3. United Kingdom & Ireland
+The UK has an incredibly advanced e-grocery ecosystem, making their web APIs excellent targets for data extraction.
+
+* Tesco: The UK market leader (historically spread across Central Europe too).
+* Sainsbury’s: The second-largest UK supermarket chain.
+* Asda: Formerly owned by Walmart, a massive hypermarket chain.
+* Morrisons: Major UK supermarket chain.
+* Marks & Spencer (M&S) / Waitrose: Premium food retailers.
+* Dunnes Stores: Ireland's largest domestic grocery chain.
+4. North America
+If your app goes global, these four entities control the vast majority of the barcode and packaging data in the US and Canada:
+
+* Walmart: The largest brick-and-mortar retailer in the world. Their online grocery system tracks millions of consumer products.
+* The Kroger Co.: The largest supermarket operator in the US (brands include Kroger, Ralphs, Fred Meyer, King Soopers).
+* Albertsons Companies: Another massive US conglomerate (brands include Albertsons, Safeway, Vons, Jewel-Osco).
+* Costco Wholesale: Membership-only warehouse club (global footprint).
+* Loblaw Companies (Canada): Canada's largest food retailer (brands include Loblaws, No Frills, Real Canadian Superstore).
+5. Oceania & Asia
+
+* Woolworths Group & Coles Group (Australia): A strict duopoly that controls over 70% of the Australian grocery market. They both have sophisticated online delivery apps with highly interceptable data structures.
+* Seven & i Holdings (Japan / Global): Owners of 7-Eleven. While a convenience store, they dictate the packaging data of thousands of single-serve foods across Asia and North America.
+* Aeon (Japan & Southeast Asia): Asia's largest retail conglomerate operating massive hypermarkets.] dont be afraid to add your own we are talking anything above 10 selling points
+* this happens only if the product has a different code then the same product but that shouldnt happen
+* in the database it will look something like this (PRODUCT-NAME,CODE,SHOP,PRICE,INGREDIENTS,ALERGENS,NUTRITION-SCORE,STATE) where state is if it is a so called "food" or "obelisk" or "eatable chemical paste"
+* this should be all that i remember if you think of ANYTHING else that should be usefull LET ME KNOW and ask if i want it implemented
+
+CLAUDE:
+This is a big project. Let me make sure I understand the full scope before writing a single line, because some decisions here will shape everything.
+A few questions first:You said: Q: The shared login — same account works for both LevelUp and the food app?Q: The shared login — same account works for both LevelUp and the food app?
+
+ME:
+A: Yes, one account for everythingQ: The food state classification (real food / obelisk / chemical paste) — who decides it?
+A: AI suggests, admin approvesQ: The background product fetcher (Rohlik/Tesco scraper) — where does it run?
+A: Same server as the apps (your T530)3:38 PMClaude responded: Perfect.Perfect. Here's the full picture of what we're building before I write anything:
+
+CLAUDE:
+**Architecture overview**
+
+One domain `home.eggmanstudio.me`, one shared auth (the SQLite users table you already have), three apps behind one nginx reverse proxy:
+
+```
+home.eggmanstudio.me        → homepage (about, login, signup, app switcher)
+home.eggmanstudio.me/levelup  → LevelUp app (existing)
+home.eggmanstudio.me/food     → "Do you know what you eat?" app
+```
+
+HTTPS free via **Certbot + Let's Encrypt**, nginx handles SSL termination.
+
+---
+
+**What I'm about to build — confirming scope before writing:**
+
+**1. Remove AI coach from LevelUp** — simple, already know how.
+
+**2. Homepage** (`home_app` — new FastAPI mini-app or static served by nginx):
+- Landing page: about both apps, what Eggman Studio is
+- Login / signup (shared, redirects to whichever app they came from)
+- App switcher navbar once logged in
+
+**3. "Do You Know What You Eat?" app** (`food_app`):
+- Barcode scan (camera in browser via JS, or manual EAN input)
+- Lookup chain: local DB → Open Food Facts → background queue for Rohlik/Tesco
+- User picks which product match + which shop they bought it in
+- Product page: ingredients, allergens, nutrition, AI classification (real food / obelisk / chemical paste) with admin approval queue
+- Shop database (all the chains you listed)
+- Admin panel: approve/reject AI classifications, view scraper status
+
+**4. Background scraper service** (runs as a separate Docker container):
+- Rohlik crawler (product catalog, EAN, ingredients, nutrition)
+- Tesco CZ crawler (intercept-style, httpx + HTTP/2)
+- Nightly AI classification job (LLaVA or a rule-based fallback)
+- Stores everything in a `products` SQLite table
+
+**5. Full deployment walkthrough:**
+- nginx config with reverse proxy + Let's Encrypt
+- Updated `docker-compose.yml` with all containers
+- Step-by-step commands from zero to running with HTTPS
+
+---
+
+Before I start — two more things I need from you:
+
+ME:
+
+Q: Barcode scanning in the food app — how should it work?
+A: Camera scan in the browser (JS, works on mobile)
+
+Q: Product database scope to start?
+A: Czech + basic global (OFF worldwide)

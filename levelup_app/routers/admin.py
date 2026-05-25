@@ -15,7 +15,7 @@ from services import db
 from services.queue import enqueue_log
 
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="levelup_app/templates")
 logger = logging.getLogger(__name__)
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")

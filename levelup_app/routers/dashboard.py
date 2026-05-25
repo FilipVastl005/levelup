@@ -14,7 +14,7 @@ from services.xp import xp_progress, calculate_level
 from services.queue import enqueue_log
 
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="levelup_app/templates")
 logger = logging.getLogger(__name__)
 
 UPLOADS_DIR = os.getenv("UPLOADS_DIR", "/app/uploads")
@@ -67,15 +67,15 @@ def _build_dashboard_context(user: dict) -> dict:
 async def root(request: Request):
     user = get_current_user(request)
     if user:
-        return RedirectResponse("/dashboard", status_code=302)
-    return RedirectResponse("/login", status_code=302)
+        return RedirectResponse("/levelup/dashboard", status_code=302)
+    return RedirectResponse("/login?next=/levelup/dashboard", status_code=302)
 
 
 @router.get("/dashboard")
 async def dashboard(request: Request):
     user = get_current_user(request)
     if not user:
-        return RedirectResponse("/login", status_code=302)
+        return RedirectResponse("/login?next=/levelup/dashboard", status_code=302)
 
     ctx = _build_dashboard_context(user)
     ctx["request"] = request
@@ -87,7 +87,7 @@ async def dashboard(request: Request):
 async def requests_page(request: Request):
     user = get_current_user(request)
     if not user:
-        return RedirectResponse("/login", status_code=302)
+        return RedirectResponse("/login?next=/levelup/requests", status_code=302)
 
     queue = db.get_queue_for_user(user["id"])
     return templates.TemplateResponse("requests.html", {
