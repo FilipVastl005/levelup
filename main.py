@@ -29,20 +29,28 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("Database ready.")
 
-    # Check Ollama connectivity
-    import httpx
+    # Check Ollama connectivity and warm up model
+    from services.ollama import client as ollama_client
     import os
     ollama_url = os.getenv("OLLAMA_URL", "http://ollama:11434")
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get(f"{ollama_url}/api/tags")
-            if resp.status_code == 200:
-                models = [m['name'] for m in resp.json().get("models", [])]
-                logger.info(f"Ollama reachable. Models: {models}")
-                if not any(m.startswith('llava') for m in models):
-                    logger.warning("Model 'llava' NOT FOUND in Ollama tags!")
+        resp = await ollama_client.get(f"{ollama_url}/api/tags", timeout=5.0)
+        if resp.status_code == 200:
+            models = [m['name'] for m in resp.json().get("models", [])]
+            logger.info(f"Ollama reachable. Models: {models}")
+            if any(m.startswith('llava') for m in models):
+                # Start background warmup
+                logger.info("Starting Ollama model warmup (llava)...")
+                # We don't await this, let it run in background
+                asyncio.create_task(ollama_client.post(
+                    f"{ollama_url}/api/generate",
+                    json={"model": "llava", "prompt": "hi", "stream": False},
+                    timeout=300.0
+                ))
             else:
-                logger.warning(f"Ollama returned {resp.status_code} on tags check")
+                logger.warning("Model 'llava' NOT FOUND in Ollama tags!")
+        else:
+            logger.warning(f"Ollama returned {resp.status_code} on tags check")
     except Exception as e:
         logger.error(f"Could not reach Ollama at {ollama_url} during startup: {e}")
 

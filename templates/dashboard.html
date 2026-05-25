@@ -330,14 +330,19 @@
                 async sendCoachMessage() {
                     const text = this.coachInput.trim();
                     if (!text || this.coachLoading) return;
+                    
                     this.coachMessages.push({ role: 'user', text });
                     this.coachInput = '';
                     this.coachLoading = true;
                     this.$nextTick(() => this._scrollChat());
+                    
                     try {
                         const r = await fetch('/coach/chat', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'X-Alpine-Request': 'true' },
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'X-Alpine-Request': 'true'
+                            },
                             body: JSON.stringify({
                                 message: text,
                                 history: this.coachMessages.slice(-10),
@@ -350,10 +355,23 @@
                                 }
                             })
                         });
+                        
+                        if (!r.ok) {
+                            const errData = await r.json().catch(() => ({}));
+                            throw new Error(errData.reply || `Server error: ${r.status}`);
+                        }
+                        
                         const d = await r.json();
                         this.coachMessages.push({ role: 'coach', text: d.reply || 'Sorry, no response.' });
                     } catch(e) {
-                        this.coachMessages.push({ role: 'coach', text: 'Network error, try again.' });
+                        console.error('Coach Error:', e);
+                        let msg = 'Network error or server too busy. ';
+                        if (e.message.includes('timeout') || e.message.includes('NetworkError') || e.message.includes('fetch')) {
+                            msg += 'The AI might be "waking up" (loading into memory). Please wait 30s and try sending your message again! 🤖';
+                        } else {
+                            msg += e.message;
+                        }
+                        this.coachMessages.push({ role: 'coach', text: msg });
                     } finally {
                         this.coachLoading = false;
                         this.$nextTick(() => this._scrollChat());
